@@ -7,7 +7,7 @@ import {
   Bars3Icon,
 } from "@heroicons/react/24/outline";
 
-const Navbar = ({ darkMode, toggleDarkMode }) => {
+const Navbar = ({ darkMode, toggleDarkMode, onLogout }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -116,10 +116,11 @@ const Navbar = ({ darkMode, toggleDarkMode }) => {
                     Settings
                   </a>
                 </li>
-                <li className="hover:bg-gray-100 dark:hover:bg-gray-600 p-2">
-                  <a href="#" className="block">
-                    Logout
-                  </a>
+                <li
+                  className="hover:bg-gray-100 dark:hover:bg-gray-600 p-2 cursor-pointer"
+                  onClick={onLogout} // Call the onLogout function
+                >
+                  Logout
                 </li>
               </ul>
             </div>

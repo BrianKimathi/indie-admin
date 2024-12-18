@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import { setUser, logout } from "./store/authSlice"; // Redux actions
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import Events from "./pages/Events";
@@ -10,15 +12,49 @@ import Dashboard from "./pages/Dashboard";
 import Features from "./pages/Features";
 
 function App() {
-  const [darkMode, setDarkMode] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  const [darkMode, setDarkMode] = useState(() => {
+    // Retrieve dark mode preference from localStorage
+    const storedDarkMode = localStorage.getItem("darkMode");
+    return storedDarkMode === "true";
+  });
+
+  const isLoggedIn = useSelector((state) => state.auth.isAuthenticated);
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    // Check if user session exists in localStorage and restore it
+    const storedUser = localStorage.getItem("authUser");
+    const storedRole = localStorage.getItem("authRole");
+
+    if (storedUser && storedRole) {
+      dispatch(setUser({ user: JSON.parse(storedUser), role: JSON.parse(storedRole) }));
+    }
+  }, [dispatch]);
+
+  useEffect(() => {
+    // Save dark mode preference to localStorage
+    localStorage.setItem("darkMode", darkMode);
+  }, [darkMode]);
 
   const toggleDarkMode = () => setDarkMode(!darkMode);
+
+  const handleLogout = () => {
+    dispatch(logout());
+    // Clear session data from localStorage
+    localStorage.removeItem("authUser");
+    localStorage.removeItem("authRole");
+  };
 
   return (
     <Router>
       <div className={`${darkMode ? "dark" : ""} flex flex-col h-screen`}>
-        {isLoggedIn && <Navbar darkMode={darkMode} toggleDarkMode={toggleDarkMode} />}
+        {isLoggedIn && (
+          <Navbar
+            darkMode={darkMode}
+            toggleDarkMode={toggleDarkMode}
+            onLogout={handleLogout}
+          />
+        )}
         <div className="flex flex-1">
           {isLoggedIn && <Sidebar darkMode={darkMode} />}
           <main
@@ -33,15 +69,12 @@ function App() {
                   <Route path="/events" element={<Events />} />
                   <Route path="/inspirations" element={<Inspirations />} />
                   <Route path="/users" element={<Users />} />
-                  <Route path="/features" element={<Features />} />                  
+                  <Route path="/features" element={<Features />} />
                   <Route path="*" element={<Navigate to="/" />} />
                 </>
               ) : (
                 <>
-                  <Route
-                    path="/login"
-                    element={<Login setIsLoggedIn={setIsLoggedIn} />}
-                  />
+                  <Route path="/login" element={<Login />} />
                   <Route path="*" element={<Navigate to="/login" />} />
                 </>
               )}
