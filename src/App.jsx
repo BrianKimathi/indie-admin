@@ -7,6 +7,7 @@ import Inspirations from "./pages/Inspirations";
 import Users from "./pages/Users";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import Features from "./pages/Features";
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -32,6 +33,7 @@ function App() {
                   <Route path="/events" element={<Events />} />
                   <Route path="/inspirations" element={<Inspirations />} />
                   <Route path="/users" element={<Users />} />
+                  <Route path="/features" element={<Features />} />                  
                   <Route path="*" element={<Navigate to="/" />} />
                 </>
               ) : (
