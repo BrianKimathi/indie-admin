@@ -5,7 +5,7 @@ import { setUser, logout } from "./store/authSlice"; // Redux actions
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import Events from "./pages/Events";
-import Inspirations from "./pages/Inspirations";
+import PastEvents from "./pages/PastEvents";
 import Users from "./pages/Users";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -26,8 +26,18 @@ function App() {
     const storedUser = localStorage.getItem("authUser");
     const storedRole = localStorage.getItem("authRole");
 
-    if (storedUser && storedRole) {
-      dispatch(setUser({ user: JSON.parse(storedUser), role: JSON.parse(storedRole) }));
+    try {
+      if (storedUser && storedRole) {
+        dispatch(
+          setUser({
+            user: JSON.parse(storedUser), // Parse only if it's valid JSON
+            role: storedRole, // Use directly if stored as plain text
+          })
+        );
+      }
+    } catch (error) {
+      console.error("Error parsing user session from localStorage:", error);
+      // Handle any malformed JSON
     }
   }, [dispatch]);
 
@@ -67,7 +77,7 @@ function App() {
                 <>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/events" element={<Events />} />
-                  <Route path="/inspirations" element={<Inspirations />} />
+                  <Route path="/past-events" element={<PastEvents />} />
                   <Route path="/users" element={<Users />} />
                   <Route path="/features" element={<Features />} />
                   <Route path="*" element={<Navigate to="/" />} />

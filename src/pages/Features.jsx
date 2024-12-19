@@ -1,24 +1,32 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronUpIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
+import { ref, push, update, remove, onValue } from "firebase/database"; // Firebase Realtime Database methods
+import { db } from "../config/firebase"; // Firebase config
 
 const Features = () => {
-  const [features, setFeatures] = useState([
-    {
-      id: 1,
-      image: "https://via.placeholder.com/150",
-      author: "John Doe",
-      link: "https://example.com/author-work",
-    },
-  ]);
-
+  const [features, setFeatures] = useState([]);
   const [newFeature, setNewFeature] = useState({
     image: "",
     author: "",
     link: "",
   });
-
   const [editingId, setEditingId] = useState(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
+
+  useEffect(() => {
+    // Fetch features from Firebase
+    const featuresRef = ref(db, "features/");
+    onValue(featuresRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const formattedData = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+        setFeatures(formattedData);
+      }
+    });
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -27,15 +35,16 @@ const Features = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+
     if (editingId) {
-      setFeatures(
-        features.map((feature) =>
-          feature.id === editingId ? { ...newFeature, id: editingId } : feature
-        )
-      );
+      // Update existing feature in Firebase
+      const featureRef = ref(db, `features/${editingId}`);
+      update(featureRef, newFeature);
       setEditingId(null);
     } else {
-      setFeatures([...features, { ...newFeature, id: Date.now() }]);
+      // Add new feature to Firebase
+      const featuresRef = ref(db, "features/");
+      push(featuresRef, newFeature);
     }
 
     setNewFeature({ image: "", author: "", link: "" });
@@ -43,7 +52,7 @@ const Features = () => {
   };
 
   const handleEdit = (id) => {
-    const feature = features.find((feature) => feature.id === id);
+    const feature = features.find((feat) => feat.id === id);
     setNewFeature(feature);
     setEditingId(id);
     setIsFormVisible(true);
@@ -51,7 +60,8 @@ const Features = () => {
 
   const handleDelete = (id) => {
     if (window.confirm("Are you sure you want to delete this feature?")) {
-      setFeatures(features.filter((feature) => feature.id !== id));
+      const featureRef = ref(db, `features/${id}`);
+      remove(featureRef);
     }
   };
 
@@ -74,7 +84,10 @@ const Features = () => {
       </div>
 
       {isFormVisible && (
-        <form onSubmit={handleSubmit} className="mb-6 p-4 border rounded bg-gray-100 dark:bg-gray-800">
+        <form
+          onSubmit={handleSubmit}
+          className="mb-6 p-4 border rounded bg-gray-100 dark:bg-gray-800"
+        >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block font-semibold mb-1">Image URL</label>
@@ -127,7 +140,9 @@ const Features = () => {
 
       <div className="space-y-4">
         {features.length === 0 ? (
-          <p className="text-gray-600 dark:text-gray-400">No featured arts added yet.</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            No featured arts added yet.
+          </p>
         ) : (
           features.map((feature) => (
             <div

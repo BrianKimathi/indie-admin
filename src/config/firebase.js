@@ -1,7 +1,7 @@
 // Import the functions you need from the Firebase SDKs
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getDatabase } from "firebase/database"; // For Realtime Database
 import { getStorage } from "firebase/storage"; // For Firebase Storage
 
 // Firebase configuration from .env
@@ -20,7 +20,7 @@ const app = initializeApp(firebaseConfig);
 
 // Initialize Firebase Services
 export const auth = getAuth(app); // Firebase Authentication
-export const db = getFirestore(app); // Firestore Database
+export const db = getDatabase(app); // Realtime Database
 export const storage = getStorage(app); // Firebase Storage
 
 export default app;

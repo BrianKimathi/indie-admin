@@ -1,0 +1,29 @@
+{
+    "events": [
+        "theeventidassignedbydatabase": {
+            "title": "Guide",
+            "theme": "light",
+            "date": "2025-01-01",
+            "location": "Online",
+            "modelType": "3D",
+            "modelsCount": "10",
+            "software": "Blender",
+            "enrollment": "Free",
+            "prizes": "Certificates",
+            "thumbnail": "https://example.com/guide.jpg",
+            "inspirations": [
+                {
+                    "image": "https://example.com/inspiration1.jpg",
+                    "title": "Inspiration 1",
+                    "description": "Description of Inspiration 1"
+                },
+                {
+                    "image": "https://example.com/inspiration2.jpg",
+                    "title": "Inspiration 2",
+                    "description": "Description of Inspiration 2"
+                }
+            ]
+        }
+    ]
+}
+

@@ -1,39 +1,39 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronUpIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
+import { ref, push, update, remove, onValue } from "firebase/database"; // Firebase Realtime Database methods
+import { db } from "../config/firebase"; // Firebase config
 
-const Inspirations = () => {
-  const [inspirations, setInspirations] = useState([
-    {
-      id: 1,
-      title: "Game Strategy Guide",
-      link: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-      description: "A strategy guide for gamers.",
-    },
-    {
-      id: 2,
-      title: "Top 10 Gaming Tips",
-      link: "https://www.youtube.com/watch?v=kJQP7kiw5Fk",
-      description: "Improve your gaming skills.",
-    },
-  ]);
-
-  const [newInspiration, setNewInspiration] = useState({
+const PastEvents = () => {
+  const [pastEvents, setPastEvents] = useState([]);
+  const [newEvent, setNewEvent] = useState({
     title: "",
     link: "",
     description: "",
   });
-
   const [editingId, setEditingId] = useState(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [isAdmin] = useState(true);
 
-  // Handle Input Changes
+  useEffect(() => {
+    // Fetch past events from Firebase
+    const pastEventsRef = ref(db, "pastEvents/");
+    onValue(pastEventsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const formattedData = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+        setPastEvents(formattedData);
+      }
+    });
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setNewInspiration({ ...newInspiration, [name]: value });
+    setNewEvent({ ...newEvent, [name]: value });
   };
 
-  // Extract YouTube Video ID
   const extractYouTubeID = (url) => {
     const regex =
       /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
@@ -41,59 +41,53 @@ const Inspirations = () => {
     return match ? match[1] : null;
   };
 
-  // Add or Update Inspiration
   const handleSubmit = (e) => {
     e.preventDefault();
-    const videoID = extractYouTubeID(newInspiration.link);
+    const videoID = extractYouTubeID(newEvent.link);
     if (!videoID) {
       alert("Please enter a valid YouTube link.");
       return;
     }
 
     if (editingId) {
-      setInspirations((prev) =>
-        prev.map((insp) =>
-          insp.id === editingId ? { ...newInspiration, id: editingId } : insp
-        )
-      );
+      // Update existing event in Firebase
+      const eventRef = ref(db, `pastEvents/${editingId}`);
+      update(eventRef, newEvent);
       setEditingId(null);
     } else {
-      setInspirations((prev) => [
-        ...prev,
-        { ...newInspiration, id: Date.now() },
-      ]);
+      // Add new event to Firebase
+      const pastEventsRef = ref(db, "pastEvents/");
+      push(pastEventsRef, newEvent);
     }
 
-    setNewInspiration({ title: "", link: "", description: "" });
+    setNewEvent({ title: "", link: "", description: "" });
     setIsFormVisible(false);
   };
 
-  // Edit Inspiration
   const handleEdit = (id) => {
-    const inspiration = inspirations.find((insp) => insp.id === id);
-    setNewInspiration(inspiration);
+    const event = pastEvents.find((evt) => evt.id === id);
+    setNewEvent(event);
     setEditingId(id);
     setIsFormVisible(true);
   };
 
-  // Delete Inspiration
   const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this inspiration?")) {
-      setInspirations((prev) => prev.filter((insp) => insp.id !== id));
+    if (window.confirm("Are you sure you want to delete this event?")) {
+      const eventRef = ref(db, `pastEvents/${id}`);
+      remove(eventRef);
     }
   };
 
   return (
     <div className="p-6 dark:bg-gray-900 dark:text-gray-200 min-h-screen">
-      <h1 className="text-3xl font-bold mb-4">Manage Inspirations</h1>
+      <h1 className="text-3xl font-bold mb-4">Manage Past Events</h1>
 
-      {/* Toggle Form */}
       <div
         className="flex items-center justify-between cursor-pointer bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded mb-4"
         onClick={() => setIsFormVisible(!isFormVisible)}
       >
         <h2 className="text-lg font-bold">
-          {editingId ? "Edit Inspiration" : "Add New Inspiration"}
+          {editingId ? "Edit Event" : "Add New Event"}
         </h2>
         {isFormVisible ? (
           <ChevronUpIcon className="w-6 h-6" />
@@ -102,7 +96,6 @@ const Inspirations = () => {
         )}
       </div>
 
-      {/* Form */}
       {isFormVisible && isAdmin && (
         <form
           onSubmit={handleSubmit}
@@ -113,9 +106,9 @@ const Inspirations = () => {
             <input
               type="text"
               name="title"
-              value={newInspiration.title}
+              value={newEvent.title}
               onChange={handleChange}
-              placeholder="Inspiration Title"
+              placeholder="Event Title"
               className="w-full border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200"
               required
             />
@@ -125,7 +118,7 @@ const Inspirations = () => {
             <input
               type="url"
               name="link"
-              value={newInspiration.link}
+              value={newEvent.link}
               onChange={handleChange}
               placeholder="https://youtube.com/..."
               className="w-full border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200"
@@ -136,7 +129,7 @@ const Inspirations = () => {
             <label className="block font-semibold mb-1">Description</label>
             <textarea
               name="description"
-              value={newInspiration.description}
+              value={newEvent.description}
               onChange={handleChange}
               placeholder="Short description"
               rows="3"
@@ -148,44 +141,43 @@ const Inspirations = () => {
             type="submit"
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
           >
-            {editingId ? "Update Inspiration" : "Add Inspiration"}
+            {editingId ? "Update Event" : "Add Event"}
           </button>
         </form>
       )}
 
-      {/* Grid of Inspirations */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {inspirations.map((insp) => {
-          const videoID = extractYouTubeID(insp.link);
+        {pastEvents.map((evt) => {
+          const videoID = extractYouTubeID(evt.link);
           return (
             <div
-              key={insp.id}
+              key={evt.id}
               className="p-4 border rounded bg-white dark:bg-gray-800 shadow flex flex-col"
             >
-              <h2 className="text-lg font-bold mb-2">{insp.title}</h2>
+              <h2 className="text-lg font-bold mb-2">{evt.title}</h2>
               <div className="relative w-full h-0 pb-[56.25%] mb-2">
                 {videoID && (
                   <iframe
                     className="absolute top-0 left-0 w-full h-full rounded"
                     src={`https://www.youtube.com/embed/${videoID}`}
-                    title={insp.title}
+                    title={evt.title}
                     allowFullScreen
                   ></iframe>
                 )}
               </div>
               <p className="text-gray-700 dark:text-gray-300 mb-2 flex-grow">
-                {insp.description}
+                {evt.description}
               </p>
               {isAdmin && (
                 <div className="flex gap-2">
                   <button
-                    onClick={() => handleEdit(insp.id)}
+                    onClick={() => handleEdit(evt.id)}
                     className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"
                   >
                     Edit
                   </button>
                   <button
-                    onClick={() => handleDelete(insp.id)}
+                    onClick={() => handleDelete(evt.id)}
                     className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
                   >
                     Delete
@@ -200,4 +192,4 @@ const Inspirations = () => {
   );
 };
 
-export default Inspirations;
+export default PastEvents;

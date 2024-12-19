@@ -1,5 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronUpIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
+import { db, storage } from "../config/firebase";
+import {
+  ref as storageRef,
+  uploadBytes,
+  getDownloadURL,
+} from "firebase/storage";
+import {
+  ref as databaseRef,
+  push,
+  update,
+  remove,
+  onValue,
+} from "firebase/database";
 
 const Events = () => {
   const [events, setEvents] = useState([]);
@@ -15,10 +28,32 @@ const Events = () => {
     software: "",
     enrollment: "",
     prizes: "",
-    inspirations: [{ image: "", imageType: "url", url: "" }], // Default inspiration
+    inspirations: [
+      { image: "", imageType: "url", url: "" },
+      { image: "", imageType: "url", url: "" },
+      { image: "", imageType: "url", url: "" },
+      { image: "", imageType: "url", url: "" },
+    ],
   });
-  const [editingId, setEditingId] = useState(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+
+  useEffect(() => {
+    const eventsRef = databaseRef(db, "events");
+    onValue(eventsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const fetchedEvents = Object.keys(data).map((key) => ({
+          id: key,
+          ...data[key],
+        }));
+        setEvents(fetchedEvents);
+      } else {
+        setEvents([]);
+      }
+    });
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -28,7 +63,7 @@ const Events = () => {
   const handleFileChange = (e, field) => {
     const file = e.target.files[0];
     if (file) {
-      setNewEvent({ ...newEvent, [field]: URL.createObjectURL(file) });
+      setNewEvent({ ...newEvent, [field]: file });
     }
   };
 
@@ -38,26 +73,82 @@ const Events = () => {
     setNewEvent({ ...newEvent, inspirations });
   };
 
-  const addInspiration = () => {
-    setNewEvent({
-      ...newEvent,
-      inspirations: [...newEvent.inspirations, { image: "", imageType: "url", url: "" }],
-    });
+  const uploadFile = async (file, folder) => {
+    const fileRef = storageRef(storage, `${folder}/${file.name}`);
+    await uploadBytes(fileRef, file);
+    return getDownloadURL(fileRef);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editingId) {
-      setEvents(
-        events.map((event) =>
-          event.id === editingId ? { ...newEvent, id: editingId } : event
-        )
+    setLoading(true);
+
+    try {
+      // Handle thumbnail
+      let thumbnailUrl = newEvent.thumbnail;
+      if (newEvent.thumbnailType === "file" && newEvent.thumbnail) {
+        thumbnailUrl = await uploadFile(newEvent.thumbnail, "events/thumbnails");
+      }
+
+      // Handle inspirations
+      const inspirations = await Promise.all(
+        newEvent.inspirations.map(async (insp) => {
+          if (insp.imageType === "file" && insp.image) {
+            const imageUrl = await uploadFile(insp.image, "events/inspirations");
+            return { ...insp, image: imageUrl };
+          }
+          return insp;
+        })
       );
-      setEditingId(null);
-    } else {
-      setEvents([...events, { ...newEvent, id: Date.now() }]);
+
+      const eventData = {
+        ...newEvent,
+        thumbnail: thumbnailUrl,
+        inspirations,
+      };
+
+      if (editingId) {
+        // Update existing event
+        const eventRef = databaseRef(db, `events/${editingId}`);
+        await update(eventRef, eventData);
+        setEvents((prevEvents) =>
+          prevEvents.map((event) =>
+            event.id === editingId ? { ...eventData, id: editingId } : event
+          )
+        );
+        setEditingId(null);
+      } else {
+        // Create new event
+        const newEventRef = databaseRef(db, "events");
+        const newEventKey = push(newEventRef).key;
+        await update(databaseRef(db, `events/${newEventKey}`), eventData);
+        setEvents([...events, { ...eventData, id: newEventKey }]);
+      }
+
+      resetForm();
+    } catch (error) {
+      console.error("Error saving event:", error);
+    } finally {
+      setLoading(false);
     }
-    resetForm();
+  };
+
+  const handleEdit = (eventId) => {
+    const event = events.find((e) => e.id === eventId);
+    if (event) {
+      setNewEvent(event);
+      setEditingId(eventId);
+      setIsFormVisible(true);
+    }
+  };
+
+  const handleDelete = async (eventId) => {
+    try {
+      await remove(databaseRef(db, `events/${eventId}`));
+      setEvents((prevEvents) => prevEvents.filter((e) => e.id !== eventId));
+    } catch (error) {
+      console.error("Error deleting event:", error);
+    }
   };
 
   const resetForm = () => {
@@ -73,22 +164,15 @@ const Events = () => {
       software: "",
       enrollment: "",
       prizes: "",
-      inspirations: [{ image: "", imageType: "url", url: "" }],
+      inspirations: [
+        { image: "", imageType: "url", url: "" },
+        { image: "", imageType: "url", url: "" },
+        { image: "", imageType: "url", url: "" },
+        { image: "", imageType: "url", url: "" },
+      ],
     });
+    setEditingId(null);
     setIsFormVisible(false);
-  };
-
-  const handleEdit = (id) => {
-    const event = events.find((event) => event.id === id);
-    setNewEvent(event);
-    setEditingId(id);
-    setIsFormVisible(true);
-  };
-
-  const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this event?")) {
-      setEvents(events.filter((event) => event.id !== id));
-    }
   };
 
   return (
@@ -222,7 +306,6 @@ const Events = () => {
             </div>
           </div>
 
-          {/* Thumbnail Selection */}
           <div>
             <label className="block font-semibold mb-1">Thumbnail</label>
             <div className="flex items-center gap-2">
@@ -263,7 +346,6 @@ const Events = () => {
             )}
           </div>
 
-          {/* Inspirations */}
           <div className="mt-4">
             <label className="block font-semibold mb-1">Inspirations</label>
             {newEvent.inspirations.map((insp, index) => (
@@ -305,11 +387,7 @@ const Events = () => {
                   <input
                     type="file"
                     onChange={(e) =>
-                      handleInspirationChange(
-                        index,
-                        "image",
-                        URL.createObjectURL(e.target.files[0])
-                      )
+                      handleInspirationChange(index, "image", e.target.files[0])
                     }
                     className="w-full border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200"
                     required
@@ -327,73 +405,48 @@ const Events = () => {
                 />
               </div>
             ))}
-            <button
-              type="button"
-              onClick={addInspiration}
-              className="mt-2 bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
-            >
-              Add Inspiration
-            </button>
           </div>
+
           <button
             type="submit"
-            className="mt-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+            className={`mt-4 px-4 py-2 rounded text-white ${
+              loading ? "bg-gray-500" : "bg-green-500 hover:bg-green-600"
+            }`}
+            disabled={loading}
           >
-            {editingId ? "Update Event" : "Create Event"}
+            {loading ? "Loading..." : editingId ? "Update Event" : "Create Event"}
           </button>
         </form>
       )}
 
-      {/* Event List */}
       <div className="space-y-4">
         {events.map((event) => (
-          <div key={event.id} className="p-4 border rounded bg-white dark:bg-gray-800 shadow">
+          <div
+            key={event.id}
+            className="p-4 border rounded bg-white dark:bg-gray-800 shadow"
+          >
             <div className="flex items-start gap-4">
-              <img src={event.thumbnail} alt="Thumbnail" className="w-20 h-20 rounded" />
+              <img
+                src={event.thumbnail}
+                alt="Thumbnail"
+                className="w-20 h-20 rounded"
+              />
               <div>
                 <h2 className="text-lg font-bold">{event.title}</h2>
-                <p>{event.theme}</p>
                 <p>{event.date}</p>
-                <p>{event.modelType}</p>
-                <p>{event.modelsCount}</p>
-                <p>{event.software}</p>
-                <p>{event.enrollment}</p>
-                <p>{event.prizes}</p>
-                <p>
-                  <a href={event.location} className="text-blue-500 hover:underline">
-                    Location
-                  </a>
-                </p>
-                <h3 className="font-semibold">Inspirations:</h3>
-                <ul className="list-disc list-inside">
-                  {event.inspirations.map((insp, i) => (
-                    <li key={i}>
-                      <a href={insp.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                        <img
-                          src={insp.image}
-                          alt={`Inspiration ${i}`}
-                          className="inline-block w-10 h-10 mr-2 rounded"
-                        />
-                        Inspiration {i + 1}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+                <button
+                  onClick={() => handleEdit(event.id)}
+                  className="mt-2 bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(event.id)}
+                  className="mt-2 bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 ml-2"
+                >
+                  Delete
+                </button>
               </div>
-            </div>
-            <div className="flex gap-2 mt-4">
-              <button
-                onClick={() => handleEdit(event.id)}
-                className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => handleDelete(event.id)}
-                className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-              >
-                Delete
-              </button>
             </div>
           </div>
         ))}

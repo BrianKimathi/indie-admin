@@ -15,7 +15,7 @@ const Sidebar = ({ darkMode }) => {
     { name: "Users", path: "/users" },
     { name: "Events", path: "/events" },
     { name: "Featured Arts", path: "/features" },
-    { name: "Past Events", path: "/inspirations" },
+    { name: "Past Events", path: "/past-events" },
   ];
 
   return (

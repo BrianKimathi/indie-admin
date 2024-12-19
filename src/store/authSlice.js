@@ -1,9 +1,9 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-  user: null, // Logged-in user info
-  role: null, // User role
-  isAuthenticated: false, // Auth status
+  user: JSON.parse(localStorage.getItem("authUser")) || null,
+  role: localStorage.getItem("authRole") || null,
+  isAuthenticated: !!localStorage.getItem("authUser"),
 };
 
 const authSlice = createSlice({
@@ -17,7 +17,7 @@ const authSlice = createSlice({
 
       // Persist user data in localStorage
       localStorage.setItem("authUser", JSON.stringify(action.payload.user));
-      localStorage.setItem("authRole", JSON.stringify(action.payload.role));
+      localStorage.setItem("authRole", action.payload.role);
     },
     logout: (state) => {
       state.user = null;
