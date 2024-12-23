@@ -6,10 +6,12 @@ import {
   UserCircleIcon,
   Bars3Icon,
 } from "@heroicons/react/24/outline";
+import { useNavigate } from "react-router-dom"; // Import useNavigate for navigation
 
 const Navbar = ({ darkMode, toggleDarkMode, onLogout }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const navigate = useNavigate(); // Initialize navigate
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -74,10 +76,6 @@ const Navbar = ({ darkMode, toggleDarkMode, onLogout }) => {
 
       {/* Icons */}
       <div className="flex items-center gap-4">
-        {/* Notifications */}
-        <button aria-label="Notifications" className="hover:text-blue-500">
-          <BellIcon className="h-6 w-6 cursor-pointer" />
-        </button>
 
         {/* Dark Mode Toggle */}
         <button
@@ -106,16 +104,17 @@ const Navbar = ({ darkMode, toggleDarkMode, onLogout }) => {
               }`}
             >
               <ul>
-                <li className="hover:bg-gray-100 dark:hover:bg-gray-600 p-2">
-                  <a href="#" className="block">
-                    Profile
-                  </a>
+                <li
+                  className="hover:bg-gray-100 dark:hover:bg-gray-600 p-2 cursor-pointer"
+                  onClick={() => navigate("/profile")} // Navigate to /profile
+                >
+                  Profile
                 </li>
-                <li className="hover:bg-gray-100 dark:hover:bg-gray-600 p-2">
-                  <a href="#" className="block">
+                {/* <li className="hover:bg-gray-100 dark:hover:bg-gray-600 p-2">
+                  <a href="/settings" className="block">
                     Settings
                   </a>
-                </li>
+                </li> */}
                 <li
                   className="hover:bg-gray-100 dark:hover:bg-gray-600 p-2 cursor-pointer"
                   onClick={onLogout} // Call the onLogout function

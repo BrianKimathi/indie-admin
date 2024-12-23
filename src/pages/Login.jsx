@@ -1,20 +1,42 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useDispatch } from "react-redux";
 import { setUser } from "../store/authSlice"; // Redux actions
-import { auth } from "../config/firebase"; // Firebase config
+import { auth, db } from "../config/firebase"; // Firebase config
+import { ref, onValue } from "firebase/database"; // Firebase Realtime Database methods
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false); // New loading state
+  const [loading, setLoading] = useState(false);
+  const [adminEmails, setAdminEmails] = useState([]); // Admin emails state
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    // Fetch admin emails from Realtime Database
+    const adminEmailsRef = ref(db, "settings/adminEmails");
+    onValue(adminEmailsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        // Convert Firebase object into a plain array
+        const emails = Object.values(data);
+        setAdminEmails(emails);
+      }
+    });
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setLoading(true); // Start loading animation
+    setLoading(true);
+
     try {
+      // Check if the email is in the adminEmails list
+      if (!adminEmails.includes(email)) {
+        throw new Error("Unauthorized!!! Insufficient rights.");
+      }
+
+      // Proceed with Firebase authentication
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
@@ -31,11 +53,11 @@ const Login = () => {
       // Set session timeout (5 minutes)
       setTimeout(() => {
         dispatch({ type: "auth/logout" }); // Dispatch logout after timeout
-      }, 2 * 60 * 1000); // 5 minutes
+      }, 1 * 60 * 1000); // 5 minutes
 
       setError(""); // Clear any previous errors
     } catch (err) {
-      setError("Invalid email or password.");
+      setError(err.message || "Invalid email or password.");
     } finally {
       setLoading(false); // Stop loading animation
     }
@@ -68,7 +90,7 @@ const Login = () => {
           <button
             type="submit"
             className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded flex items-center justify-center"
-            disabled={loading} // Disable button while loading
+            disabled={loading}
           >
             {loading ? (
               <svg

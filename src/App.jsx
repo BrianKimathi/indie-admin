@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { setUser, logout } from "./store/authSlice"; // Redux actions
+import { ref, get, set, update } from "firebase/database"; // Firebase methods
+import { db } from "./config/firebase"; // Firebase configuration
+import { setUser, logout } from "./store/authSlice";
 import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import Events from "./pages/Events";
@@ -10,55 +12,76 @@ import Users from "./pages/Users";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Features from "./pages/Features";
+import Profile from "./pages/Profile";
 
 function App() {
   const [darkMode, setDarkMode] = useState(() => {
-    // Retrieve dark mode preference from localStorage
     const storedDarkMode = localStorage.getItem("darkMode");
     return storedDarkMode === "true";
   });
 
-  const isLoggedIn = useSelector((state) => state.auth.isAuthenticated);
+  const { isAuthenticated } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
 
-  useEffect(() => {
-    // Check if user session exists in localStorage and restore it
-    const storedUser = localStorage.getItem("authUser");
-    const storedRole = localStorage.getItem("authRole");
+  const SESSION_TIMEOUT = 1 * 60 * 1000; // 5 minutes
 
-    try {
-      if (storedUser && storedRole) {
-        dispatch(
-          setUser({
-            user: JSON.parse(storedUser), // Parse only if it's valid JSON
-            role: storedRole, // Use directly if stored as plain text
-          })
-        );
+  useEffect(() => {
+
+    const restoreSession = () => {
+      try {
+        const storedUser = localStorage.getItem("authUser");
+        const storedRole = localStorage.getItem("authRole");
+        const sessionStartTime = localStorage.getItem("sessionStartTime");
+
+        if (storedUser && storedRole && sessionStartTime) {
+          const sessionExpiry = parseInt(sessionStartTime, 10) + SESSION_TIMEOUT;
+
+          if (Date.now() >= sessionExpiry) {
+            // Session expired
+            handleLogout();
+          } else {
+            const remainingTime = sessionExpiry - Date.now();
+            dispatch(
+              setUser({
+                user: JSON.parse(storedUser),
+                role: storedRole,
+              })
+            );
+            // Schedule automatic logout
+            scheduleLogout(remainingTime);
+          }
+        }
+      } catch (error) {
+        console.error("Error restoring session:", error);
       }
-    } catch (error) {
-      console.error("Error parsing user session from localStorage:", error);
-      // Handle any malformed JSON
-    }
+    };
+
+    restoreSession();
   }, [dispatch]);
 
+  const scheduleLogout = (timeout) => {
+    setTimeout(() => {
+      handleLogout();
+    }, timeout);
+  };
+
+  const handleLogout = () => {
+    dispatch(logout());
+    localStorage.removeItem("authUser");
+    localStorage.removeItem("authRole");
+    localStorage.removeItem("sessionStartTime");
+  };
+
   useEffect(() => {
-    // Save dark mode preference to localStorage
     localStorage.setItem("darkMode", darkMode);
   }, [darkMode]);
 
   const toggleDarkMode = () => setDarkMode(!darkMode);
 
-  const handleLogout = () => {
-    dispatch(logout());
-    // Clear session data from localStorage
-    localStorage.removeItem("authUser");
-    localStorage.removeItem("authRole");
-  };
-
   return (
     <Router>
       <div className={`${darkMode ? "dark" : ""} flex flex-col h-screen`}>
-        {isLoggedIn && (
+        {isAuthenticated && (
           <Navbar
             darkMode={darkMode}
             toggleDarkMode={toggleDarkMode}
@@ -66,20 +89,21 @@ function App() {
           />
         )}
         <div className="flex flex-1">
-          {isLoggedIn && <Sidebar darkMode={darkMode} />}
+          {isAuthenticated && <Sidebar darkMode={darkMode} />}
           <main
             className={`flex-1 p-4 overflow-auto bg-gray-50 dark:bg-gray-900 transition-all ${
-              isLoggedIn ? "pt-16 md:pl-60" : ""
+              isAuthenticated ? "pt-16 md:pl-60" : ""
             }`}
           >
             <Routes>
-              {isLoggedIn ? (
+              {isAuthenticated ? (
                 <>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/events" element={<Events />} />
                   <Route path="/past-events" element={<PastEvents />} />
                   <Route path="/users" element={<Users />} />
                   <Route path="/features" element={<Features />} />
+                  <Route path="/profile" element={<Profile />} />
                   <Route path="*" element={<Navigate to="/" />} />
                 </>
               ) : (

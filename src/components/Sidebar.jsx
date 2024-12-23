@@ -12,7 +12,7 @@ const Sidebar = ({ darkMode }) => {
 
   const links = [
     { name: "Dashboard", path: "/" },
-    { name: "Users", path: "/users" },
+    // { name: "Users", path: "/users" },
     { name: "Events", path: "/events" },
     { name: "Featured Arts", path: "/features" },
     { name: "Past Events", path: "/past-events" },
