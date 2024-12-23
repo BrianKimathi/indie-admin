@@ -23,7 +23,7 @@ function App() {
   const { isAuthenticated } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
 
-  const SESSION_TIMEOUT = 1 * 60 * 1000; // 5 minutes
+  const SESSION_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 
   useEffect(() => {
 

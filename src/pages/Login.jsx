@@ -50,10 +50,10 @@ const Login = () => {
       localStorage.setItem("authUser", JSON.stringify(userData.user));
       localStorage.setItem("authRole", userData.role);
 
-      // Set session timeout (5 minutes)
+      // Set session timeout (10 minutes)
       setTimeout(() => {
         dispatch({ type: "auth/logout" }); // Dispatch logout after timeout
-      }, 1 * 60 * 1000); // 5 minutes
+      }, 10 * 60 * 1000); // 10 minutes
 
       setError(""); // Clear any previous errors
     } catch (err) {
