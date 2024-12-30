@@ -40,20 +40,21 @@ const Events = () => {
   const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
-    const eventsRef = databaseRef(db, "events");
-    onValue(eventsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const fetchedEvents = Object.keys(data).map((key) => ({
-          id: key,
-          ...data[key],
-        }));
-        setEvents(fetchedEvents);
-      } else {
-        setEvents([]);
-      }
-    });
-  }, []);
+  const eventsRef = databaseRef(db, "krafts/events");
+  onValue(eventsRef, (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+      const fetchedEvents = Object.keys(data).map((key) => ({
+        id: key,
+        ...data[key],
+      }));
+      setEvents(fetchedEvents);
+    } else {
+      setEvents([]);
+    }
+  });
+}, []);
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -74,64 +75,62 @@ const Events = () => {
   };
 
   const uploadFile = async (file, folder) => {
-    const fileRef = storageRef(storage, `${folder}/${file.name}`);
-    await uploadBytes(fileRef, file);
-    return getDownloadURL(fileRef);
-  };
+  const fileRef = storageRef(storage, `krafts/${folder}/${file.name}`);
+  await uploadBytes(fileRef, file);
+  return getDownloadURL(fileRef);
+};
+
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      // Handle thumbnail
-      let thumbnailUrl = newEvent.thumbnail;
-      if (newEvent.thumbnailType === "file" && newEvent.thumbnail) {
-        thumbnailUrl = await uploadFile(newEvent.thumbnail, "events/thumbnails");
-      }
-
-      // Handle inspirations
-      const inspirations = await Promise.all(
-        newEvent.inspirations.map(async (insp) => {
-          if (insp.imageType === "file" && insp.image) {
-            const imageUrl = await uploadFile(insp.image, "events/inspirations");
-            return { ...insp, image: imageUrl };
-          }
-          return insp;
-        })
-      );
-
-      const eventData = {
-        ...newEvent,
-        thumbnail: thumbnailUrl,
-        inspirations,
-      };
-
-      if (editingId) {
-        // Update existing event
-        const eventRef = databaseRef(db, `events/${editingId}`);
-        await update(eventRef, eventData);
-        setEvents((prevEvents) =>
-          prevEvents.map((event) =>
-            event.id === editingId ? { ...eventData, id: editingId } : event
-          )
-        );
-        setEditingId(null);
-      } else {
-        // Create new event
-        const newEventRef = databaseRef(db, "events");
-        const newEventKey = push(newEventRef).key;
-        await update(databaseRef(db, `events/${newEventKey}`), eventData);
-        setEvents([...events, { ...eventData, id: newEventKey }]);
-      }
-
-      resetForm();
-    } catch (error) {
-      console.error("Error saving event:", error);
-    } finally {
-      setLoading(false);
+  try {
+    let thumbnailUrl = newEvent.thumbnail;
+    if (newEvent.thumbnailType === "file" && newEvent.thumbnail) {
+      thumbnailUrl = await uploadFile(newEvent.thumbnail, "krafts/events/thumbnails");
     }
-  };
+
+    const inspirations = await Promise.all(
+      newEvent.inspirations.map(async (insp) => {
+        if (insp.imageType === "file" && insp.image) {
+          const imageUrl = await uploadFile(insp.image, "krafts/events/inspirations");
+          return { ...insp, image: imageUrl };
+        }
+        return insp;
+      })
+    );
+
+    const eventData = {
+      ...newEvent,
+      thumbnail: thumbnailUrl,
+      inspirations,
+    };
+
+    if (editingId) {
+      const eventRef = databaseRef(db, `krafts/events/${editingId}`);
+      await update(eventRef, eventData);
+      setEvents((prevEvents) =>
+        prevEvents.map((event) =>
+          event.id === editingId ? { ...eventData, id: editingId } : event
+        )
+      );
+      setEditingId(null);
+    } else {
+      const newEventRef = databaseRef(db, "krafts/events");
+      const newEventKey = push(newEventRef).key;
+      await update(databaseRef(db, `krafts/events/${newEventKey}`), eventData);
+      setEvents([...events, { ...eventData, id: newEventKey }]);
+    }
+
+    resetForm();
+  } catch (error) {
+    console.error("Error saving event:", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleEdit = (eventId) => {
     const event = events.find((e) => e.id === eventId);
@@ -143,13 +142,14 @@ const Events = () => {
   };
 
   const handleDelete = async (eventId) => {
-    try {
-      await remove(databaseRef(db, `events/${eventId}`));
-      setEvents((prevEvents) => prevEvents.filter((e) => e.id !== eventId));
-    } catch (error) {
-      console.error("Error deleting event:", error);
-    }
-  };
+  try {
+    await remove(databaseRef(db, `krafts/events/${eventId}`));
+    setEvents((prevEvents) => prevEvents.filter((e) => e.id !== eventId));
+  } catch (error) {
+    console.error("Error deleting event:", error);
+  }
+};
+
 
   const resetForm = () => {
     setNewEvent({

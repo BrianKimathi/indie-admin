@@ -15,7 +15,7 @@ const Features = () => {
 
   useEffect(() => {
     // Fetch features from Firebase
-    const featuresRef = ref(db, "features/");
+    const featuresRef = ref(db, "krafts/features/");
     onValue(featuresRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -27,6 +27,7 @@ const Features = () => {
       }
     });
   }, []);
+  
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -35,21 +36,22 @@ const Features = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
+  
     if (editingId) {
       // Update existing feature in Firebase
-      const featureRef = ref(db, `features/${editingId}`);
+      const featureRef = ref(db, `krafts/features/${editingId}`);
       update(featureRef, newFeature);
       setEditingId(null);
     } else {
       // Add new feature to Firebase
-      const featuresRef = ref(db, "features/");
+      const featuresRef = ref(db, "krafts/features/");
       push(featuresRef, newFeature);
     }
-
+  
     setNewFeature({ image: "", author: "", link: "" });
     setIsFormVisible(false);
   };
+  
 
   const handleEdit = (id) => {
     const feature = features.find((feat) => feat.id === id);
@@ -60,10 +62,11 @@ const Features = () => {
 
   const handleDelete = (id) => {
     if (window.confirm("Are you sure you want to delete this feature?")) {
-      const featureRef = ref(db, `features/${id}`);
+      const featureRef = ref(db, `krafts/features/${id}`);
       remove(featureRef);
     }
   };
+  
 
   return (
     <div className="p-6 dark:bg-gray-900 dark:text-gray-200 min-h-screen">

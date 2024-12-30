@@ -16,7 +16,7 @@ const PastEvents = () => {
 
   useEffect(() => {
     // Fetch past events from Firebase
-    const pastEventsRef = ref(db, "pastEvents/");
+    const pastEventsRef = ref(db, "krafts/pastEvents/");
     onValue(pastEventsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -28,6 +28,7 @@ const PastEvents = () => {
       }
     });
   }, []);
+  
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -48,21 +49,22 @@ const PastEvents = () => {
       alert("Please enter a valid YouTube link.");
       return;
     }
-
+  
     if (editingId) {
       // Update existing event in Firebase
-      const eventRef = ref(db, `pastEvents/${editingId}`);
+      const eventRef = ref(db, `krafts/pastEvents/${editingId}`);
       update(eventRef, newEvent);
       setEditingId(null);
     } else {
       // Add new event to Firebase
-      const pastEventsRef = ref(db, "pastEvents/");
+      const pastEventsRef = ref(db, "krafts/pastEvents/");
       push(pastEventsRef, newEvent);
     }
-
+  
     setNewEvent({ title: "", link: "", description: "" });
     setIsFormVisible(false);
   };
+  
 
   const handleEdit = (id) => {
     const event = pastEvents.find((evt) => evt.id === id);
@@ -73,10 +75,11 @@ const PastEvents = () => {
 
   const handleDelete = (id) => {
     if (window.confirm("Are you sure you want to delete this event?")) {
-      const eventRef = ref(db, `pastEvents/${id}`);
+      const eventRef = ref(db, `krafts/pastEvents/${id}`);
       remove(eventRef);
     }
   };
+  
 
   return (
     <div className="p-6 dark:bg-gray-900 dark:text-gray-200 min-h-screen">
